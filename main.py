@@ -1,11 +1,12 @@
 import flet as ft
 from datetime import datetime
+import traceback
 
 # Global Database Variables
 conn = None
 c = None
 
-# Database connection function (Sirf PIN daalne ke baad chalega)
+# Database connection function (Sirf PIN daalne ke baad chalega taaki app crash na ho)
 def init_db():
     global conn, c
     if conn is not None:
@@ -327,10 +328,5 @@ def main(page: ft.Page):
 
     load_login()
 
-# --- THE FINAL CRASH SHIELD ---
-# Yeh line Android aur PC dono par secure tareeke se chalegi
-try:
-    ft.app(target=main)
-except AttributeError:
-    # Android environment detected, skipping PC boot sequence
-    pass
+# PERFECT RUNNER
+ft.app(target=main)
