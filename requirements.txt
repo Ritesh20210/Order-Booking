@@ -1,3 +1,2 @@
-flet
 pg8000
 python-dateutil
