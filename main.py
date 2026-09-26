@@ -3,8 +3,13 @@ import pg8000.dbapi
 import ssl
 from datetime import datetime
 
+# Global variables for Database
+conn = None
+c = None
+
 # --- CLOUD DATABASE SETUP ---
 def init_db():
+    global conn, c
     ssl_context = ssl.create_default_context()
     
     conn = pg8000.dbapi.connect(
@@ -30,10 +35,6 @@ def init_db():
     """)
     c.execute("INSERT INTO users (id, name, role) VALUES (1, 'Admin', 'admin') ON CONFLICT (id) DO NOTHING;")
     c.execute("INSERT INTO users (id, name, role) VALUES (2, 'Ritesh (Boy)', 'boy') ON CONFLICT (id) DO NOTHING;")
-    
-    return conn, c
-
-conn, c = init_db()
 
 # --- MAIN APP LOGIC ---
 def main(page: ft.Page):
@@ -41,12 +42,12 @@ def main(page: ft.Page):
     page.title = "Order & Commission App"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.theme = ft.Theme(color_scheme_seed=ft.colors.TEAL, use_material3=True)
-    page.window.width = 400
-    page.window.height = 700
+    page.window_width = 400
+    page.window_height = 700
     page.padding = 0
     page.bgcolor = ft.colors.BLUE_GREY_50
 
-    # --- VIBRATION (HAPTIC FEEDBACK ONLY) ---
+    # --- VIBRATION (HAPTIC FEEDBACK) ---
     haptic = ft.HapticFeedback()
     page.overlay.append(haptic)
 
@@ -78,7 +79,6 @@ def main(page: ft.Page):
     def load_admin_view():
         page.controls.clear()
         
-        # Add Order
         platform = ft.Dropdown(options=[ft.dropdown.Option("Myntra"), ft.dropdown.Option("Meesho"), ft.dropdown.Option("Flipkart")], label="Platform", filled=True)
         qty = ft.TextField(label="Quantity", keyboard_type=ft.KeyboardType.NUMBER, prefix_icon=ft.icons.NUMBERS, filled=True)
         comm = ft.TextField(label="Commission (₹)", keyboard_type=ft.KeyboardType.NUMBER, prefix_icon=ft.icons.CURRENCY_RUPEE, filled=True)
@@ -107,7 +107,6 @@ def main(page: ft.Page):
             ])
         )
         
-        # Ledger
         adv_amt = ft.TextField(label="Advance Amount (₹)", keyboard_type=ft.KeyboardType.NUMBER, prefix_icon=ft.icons.MONEY, filled=True)
         boy_adv = ft.Dropdown(options=[ft.dropdown.Option("Ritesh (Boy)")], label="Select Boy", filled=True)
         
@@ -129,7 +128,6 @@ def main(page: ft.Page):
             ])
         )
 
-        # Status Update
         def mark_status(order_id, amount, b_name, new_status):
             c.execute("UPDATE orders SET status=%s WHERE id=%s", (new_status, order_id))
             if new_status == 'Received':
@@ -140,7 +138,6 @@ def main(page: ft.Page):
                 show_toast(f"Order #{order_id} Cancelled!", ft.colors.RED)
             load_admin_view()
 
-        # Orders List
         search_bar = ft.TextField(label="Search by ID or Platform...", prefix_icon=ft.icons.SEARCH, on_change=lambda e: filter_orders(e.control.value), filled=True)
         orders_list = ft.ListView(expand=True, spacing=15, padding=10)
         
@@ -185,7 +182,6 @@ def main(page: ft.Page):
         render_orders()
         orders_tab_content = ft.Container(padding=10, content=ft.Column([search_bar, orders_list], expand=True))
 
-        # Reports
         start_date = ft.TextField(label="Start (YYYY-MM-DD)", width=170, prefix_icon=ft.icons.DATE_RANGE, filled=True)
         end_date = ft.TextField(label="End (YYYY-MM-DD)", width=170, prefix_icon=ft.icons.DATE_RANGE, filled=True)
         report_results = ft.ListView(expand=True, spacing=10)
@@ -253,13 +249,12 @@ def main(page: ft.Page):
         wallet = get_wallet(boy_name)
         pending = get_pending(boy_name)
 
-        # Status Update function specifically for the Boy
         def mark_status_boy(order_id, amount, b_name):
             c.execute("UPDATE orders SET status='Received' WHERE id=%s", (order_id,))
             c.execute("UPDATE users SET wallet = wallet + %s WHERE name=%s", (amount, b_name))
             trigger_success_notification()
             show_toast(f"Commission ₹{amount} Added to Wallet!")
-            load_boy_view(b_name) # Refresh page to update stats
+            load_boy_view(b_name)
 
         stats = ft.Row([
             ft.Card(elevation=6, expand=True, color=ft.colors.GREEN_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.icons.ACCOUNT_BALANCE_WALLET, color=ft.colors.GREEN), ft.Text("Cleared", size=12, color=ft.colors.GREY_700), ft.Text(f"₹{wallet}", size=20, weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_800)]))),
@@ -275,7 +270,6 @@ def main(page: ft.Page):
             status_color = ft.colors.ORANGE if is_pending else (ft.colors.GREEN if stat == 'Received' else ft.colors.RED)
             status_icon = ft.icons.HOURGLASS_EMPTY if is_pending else (ft.icons.CHECK_CIRCLE if stat == 'Received' else ft.icons.CANCEL)
             
-            # Receive button for Boy (Only shows if order is pending)
             action_ui = ft.ElevatedButton(
                 "Receive Payment", 
                 icon=ft.icons.CHECK_CIRCLE, 
@@ -373,9 +367,43 @@ def main(page: ft.Page):
             )
         )
 
-    load_login()
+    # --- ANTI-CRASH STARTUP LOGIC ---
+    # 1. Pehle user ko turant ek loading screen dikhayenge taaki Android app kill na kare
+    loading_ui = ft.Container(
+        expand=True,
+        bgcolor=ft.colors.BLUE_GREY_50,
+        content=ft.Column([
+            ft.ProgressRing(color=ft.colors.TEAL),
+            ft.Container(height=10),
+            ft.Text("Connecting to Secure Cloud...", size=16, weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_800)
+        ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+    )
+    
+    page.add(loading_ui)
+    page.update()
 
-# SAFE RUNNER (For both PC and Android)
+    # 2. UI load hone ke baad Cloud Database se connect karenge
+    try:
+        init_db()
+        # Connect hote hi Loading screen hata kar Login page le aayenge
+        page.controls.clear()
+        load_login()
+    except Exception as e:
+        # Agar net nahi chala ya DB fail hua, toh app band nahi hoga, user ko yeh error dikhega
+        page.controls.clear()
+        page.add(
+            ft.Container(
+                expand=True, 
+                content=ft.Column([
+                    ft.Icon(ft.icons.WIFI_OFF, size=60, color=ft.colors.RED),
+                    ft.Text("Connection Failed!", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.RED),
+                    ft.Text(f"Error: {e}\n\nPlease check your internet connection.", text_align=ft.TextAlign.CENTER)
+                ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+            )
+        )
+        page.update()
+
+# SAFE RUNNER
 try:
     ft.app(target=main)
 except AttributeError:
