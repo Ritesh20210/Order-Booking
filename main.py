@@ -1,6 +1,7 @@
 import flet as ft
 import pg8000.dbapi
 import ssl
+import threading
 from datetime import datetime
 
 # Global variables for Database
@@ -10,7 +11,11 @@ c = None
 # --- CLOUD DATABASE SETUP ---
 def init_db():
     global conn, c
+    
+    # ANDROID SSL FIX: Bypass strict certificate verification which crashes Android Flet apps
     ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
     
     conn = pg8000.dbapi.connect(
         user="neondb_owner",
@@ -24,30 +29,14 @@ def init_db():
     conn.autocommit = True
     c = conn.cursor()
     
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT UNIQUE, role TEXT, wallet NUMERIC DEFAULT 0);
-    """)
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS orders (
-            id SERIAL PRIMARY KEY, 
-            date TEXT, platform TEXT, qty INTEGER, commission NUMERIC, boy_name TEXT, status TEXT
-        );
-    """)
+    c.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT UNIQUE, role TEXT, wallet NUMERIC DEFAULT 0);")
+    c.execute("CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, date TEXT, platform TEXT, qty INTEGER, commission NUMERIC, boy_name TEXT, status TEXT);")
     c.execute("INSERT INTO users (id, name, role) VALUES (1, 'Admin', 'admin') ON CONFLICT (id) DO NOTHING;")
     c.execute("INSERT INTO users (id, name, role) VALUES (2, 'Ritesh (Boy)', 'boy') ON CONFLICT (id) DO NOTHING;")
 
 # --- MAIN APP LOGIC ---
 def main(page: ft.Page):
-    # --- CRASH PREVENTER ---
-    # Agar koi background error aata hai, toh app band nahi hoga balki screen par dikhayega
-    def on_app_error(e):
-        page.controls.clear()
-        page.add(ft.Text(f"System Alert: {e.data}", color=ft.colors.RED, weight=ft.FontWeight.BOLD))
-        page.update()
-    page.on_error = on_app_error
-
     # --- APP CONFIGURATION ---
-    # (Window width/height hatayi gayi hai taaki Android par app crash na ho)
     page.title = "Order & Commission App"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.theme = ft.Theme(color_scheme_seed=ft.colors.TEAL, use_material3=True)
@@ -374,37 +363,44 @@ def main(page: ft.Page):
             )
         )
 
-    # --- ANTI-CRASH STARTUP LOGIC ---
+    # --- ANDROID ANTI-CRASH STARTUP LOGIC ---
+    # 1. UI Setup - Dikhate hi screen load ho jayegi (Android khush)
     loading_ui = ft.Container(
         expand=True,
         bgcolor=ft.colors.BLUE_GREY_50,
         content=ft.Column([
             ft.ProgressRing(color=ft.colors.TEAL),
-            ft.Container(height=10),
+            ft.Container(height=20),
             ft.Text("Connecting to Secure Cloud...", size=16, weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_800)
         ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
     )
-    
     page.add(loading_ui)
     page.update()
 
-    try:
-        init_db()
-        page.controls.clear()
-        load_login()
-    except Exception as e:
-        page.controls.clear()
-        page.add(
-            ft.Container(
-                expand=True, 
-                content=ft.Column([
-                    ft.Icon(ft.icons.WIFI_OFF, size=60, color=ft.colors.RED),
-                    ft.Text("Connection Failed!", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.RED),
-                    ft.Text(f"Error: {e}\n\nPlease check your internet connection.", text_align=ft.TextAlign.CENTER)
-                ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+    # 2. Database Background Thread - App block nahi hoga
+    def connect_db_in_background():
+        try:
+            init_db()
+            page.controls.clear()
+            load_login()
+            page.update()
+        except Exception as e:
+            # Agar fail hua toh force close nahi, balki error message screen par dikhega!
+            page.controls.clear()
+            page.add(
+                ft.Container(
+                    expand=True, 
+                    content=ft.Column([
+                        ft.Icon(ft.icons.ERROR, size=60, color=ft.colors.RED),
+                        ft.Text("System Error", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.RED),
+                        ft.Text(f"Detail: {str(e)}", text_align=ft.TextAlign.CENTER)
+                    ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+                )
             )
-        )
-        page.update()
+            page.update()
+
+    # Start the background task
+    threading.Thread(target=connect_db_in_background, daemon=True).start()
 
 # SAFE RUNNER
 try:
