@@ -1,11 +1,5 @@
 import flet as ft
-import pg8000.dbapi
-import ssl
-from datetime import datetime
-
-# Global Database Variables
-conn = None
-c = None
+import traceback
 
 def main(page: ft.Page):
     # --- APP CONFIGURATION ---
@@ -15,7 +9,59 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = ft.colors.BLUE_GREY_50
 
-    # --- VIBRATION (HAPTIC FEEDBACK) ---
+    # --- X-RAY CRASH DETECTOR ---
+    # Agar Android par koi library missing hui ya internet fail hua, toh app band nahi hoga!
+    # Seedha screen par laal rang (red color) mein error aayega.
+    def show_error(title, error_detail):
+        page.controls.clear()
+        page.add(
+            ft.SafeArea(
+                ft.Column([
+                    ft.Icon(ft.icons.WARNING_AMBER, color=ft.colors.RED, size=60),
+                    ft.Text(f"CRASH PREVENTED: {title}", weight="bold", color=ft.colors.RED, size=20),
+                    ft.Text(str(error_detail), color=ft.colors.BLACK, size=14, weight="bold"),
+                    ft.Container(
+                        content=ft.Text(traceback.format_exc(), color=ft.colors.RED_900, size=11),
+                        bgcolor=ft.colors.RED_50, padding=10, border_radius=5
+                    )
+                ], scroll=ft.ScrollMode.AUTO, expand=True)
+            )
+        )
+        page.update()
+
+    # --- SAFE LIBRARY IMPORT & DATABASE CONNECTION ---
+    try:
+        import pg8000.dbapi
+        import ssl
+        from datetime import datetime
+
+        # Android SSL Bypass (Security lock ko bypass karna taaki block na ho)
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
+        conn = pg8000.dbapi.connect(
+            user="neondb_owner",
+            password="npg_EAdGHMcR4Bf5",
+            host="ep-dawn-tooth-b356n6lx-pooler.c-4.ap-southeast-1.aws.neon.tech",
+            database="neondb",
+            port=5432,
+            ssl_context=ssl_context
+        )
+        conn.autocommit = True
+        c = conn.cursor()
+        
+        c.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT UNIQUE, role TEXT, wallet NUMERIC DEFAULT 0);")
+        c.execute("CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, date TEXT, platform TEXT, qty INTEGER, commission NUMERIC, boy_name TEXT, status TEXT);")
+        c.execute("INSERT INTO users (id, name, role) VALUES (1, 'Admin', 'admin') ON CONFLICT (id) DO NOTHING;")
+        c.execute("INSERT INTO users (id, name, role) VALUES (2, 'Ritesh (Boy)', 'boy') ON CONFLICT (id) DO NOTHING;")
+    
+    except Exception as e:
+        # Agar net nahi chala ya import fail hua, toh X-Ray function chalega
+        show_error("System Boot Error", e)
+        return
+
+    # --- UI & LOGIC COMPONENTS ---
     haptic = ft.HapticFeedback()
     page.overlay.append(haptic)
 
@@ -25,14 +71,11 @@ def main(page: ft.Page):
     def show_toast(message, color=ft.colors.GREEN):
         page.snack_bar = ft.SnackBar(
             ft.Text(message, color=ft.colors.WHITE, weight=ft.FontWeight.BOLD), 
-            bgcolor=color, 
-            behavior=ft.SnackBarBehavior.FLOATING,
-            shape=ft.RoundedRectangleBorder(radius=10)
+            bgcolor=color, behavior=ft.SnackBarBehavior.FLOATING, shape=ft.RoundedRectangleBorder(radius=10)
         )
         page.snack_bar.open = True
         page.update()
 
-    # --- HELPER FUNCTIONS ---
     def get_wallet(boy_name):
         c.execute("SELECT wallet FROM users WHERE name=%s", (boy_name,))
         res = c.fetchone()
@@ -58,7 +101,7 @@ def main(page: ft.Page):
                 c.execute("INSERT INTO orders (date, platform, qty, commission, boy_name, status) VALUES (%s,%s,%s,%s,%s,%s)", 
                           (today_str, platform.value, int(qty.value), float(comm.value), boy.value, 'Pending'))
                 trigger_success_notification()
-                show_toast("Order Added & Synced to Cloud!")
+                show_toast("Order Added & Synced!")
                 platform.value = qty.value = comm.value = boy.value = None
                 load_admin_view()
             else:
@@ -69,8 +112,7 @@ def main(page: ft.Page):
             content=ft.Column([
                 ft.Text("Dispatch New Order", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_800),
                 ft.Divider(height=20, color=ft.colors.TRANSPARENT),
-                platform, qty, comm, boy,
-                ft.Container(height=10),
+                platform, qty, comm, boy, ft.Container(height=10),
                 ft.ElevatedButton("Dispatch Order", icon=ft.icons.SEND, on_click=add_order, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=15), expand=True, bgcolor=ft.colors.TEAL, color=ft.colors.WHITE)
             ])
         )
@@ -90,8 +132,7 @@ def main(page: ft.Page):
             content=ft.Column([
                 ft.Text("Issue Advance Payment", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_800),
                 ft.Divider(height=20, color=ft.colors.TRANSPARENT),
-                boy_adv, adv_amt,
-                ft.Container(height=10),
+                boy_adv, adv_amt, ft.Container(height=10),
                 ft.ElevatedButton("Pay Advance", icon=ft.icons.PAYMENT, on_click=give_advance, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=15), bgcolor=ft.colors.TEAL, color=ft.colors.WHITE)
             ])
         )
@@ -106,7 +147,7 @@ def main(page: ft.Page):
                 show_toast(f"Order #{order_id} Cancelled!", ft.colors.RED)
             load_admin_view()
 
-        search_bar = ft.TextField(label="Search by ID or Platform...", prefix_icon=ft.icons.SEARCH, on_change=lambda e: filter_orders(e.control.value), filled=True)
+        search_bar = ft.TextField(label="Search by ID/Platform...", prefix_icon=ft.icons.SEARCH, on_change=lambda e: filter_orders(e.control.value), filled=True)
         orders_list = ft.ListView(expand=True, spacing=15, padding=10)
         
         def render_orders(search_text=""):
@@ -115,7 +156,6 @@ def main(page: ft.Page):
             c.execute(query, (f"%{search_text}%", f"%{search_text}%"))
             for row in c.fetchall():
                 o_id, o_date, plat, q, com, b_name, stat = row
-                
                 is_pending = stat == 'Pending'
                 status_color = ft.colors.ORANGE if is_pending else (ft.colors.GREEN if stat == 'Received' else ft.colors.RED)
                 status_icon = ft.icons.HOURGLASS_EMPTY if is_pending else (ft.icons.CHECK_CIRCLE if stat == 'Received' else ft.icons.CANCEL)
@@ -127,17 +167,14 @@ def main(page: ft.Page):
 
                 orders_list.controls.append(
                     ft.Card(
-                        elevation=4,
-                        shape=ft.RoundedRectangleBorder(radius=15),
+                        elevation=4, shape=ft.RoundedRectangleBorder(radius=15),
                         content=ft.Container(
-                            padding=15, 
-                            border_left=ft.border.BorderSide(6, status_color),
+                            padding=15, border_left=ft.border.BorderSide(6, status_color),
                             content=ft.Column([
                                 ft.Row([ft.Text(f"#{o_id} {plat}", weight=ft.FontWeight.BOLD, size=18), ft.Text(o_date, color=ft.colors.GREY, size=12)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                                 ft.Divider(height=10),
                                 ft.Row([ft.Text(f"Qty: {q}", size=14), ft.Text(f"Comm: ₹{com}", size=14, weight=ft.FontWeight.BOLD), ft.Text(f"Boy: {b_name}", size=14)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                                ft.Container(height=5),
-                                btn_row
+                                ft.Container(height=5), btn_row
                             ])
                         )
                     )
@@ -160,21 +197,12 @@ def main(page: ft.Page):
             if not start_date.value or not end_date.value:
                 show_toast("Enter both dates!", ft.colors.RED)
                 return
-                
-            c.execute("""
-                SELECT id, date, platform, commission FROM orders 
-                WHERE date >= %s AND date <= %s AND status='Received' 
-                ORDER BY date DESC
-            """, (start_date.value, end_date.value + " 23:59"))
-            
+            c.execute("SELECT id, date, platform, commission FROM orders WHERE date >= %s AND date <= %s AND status='Received' ORDER BY date DESC", (start_date.value, end_date.value + " 23:59"))
             total = 0.0
             for row in c.fetchall():
                 o_id, d, p, com = row
                 total += float(com)
-                report_results.controls.append(
-                    ft.ListTile(leading=ft.Icon(ft.icons.CHECK_CIRCLE, color=ft.colors.GREEN), title=ft.Text(f"#{o_id} {p}"), subtitle=ft.Text(d), trailing=ft.Text(f"₹{com}", weight=ft.FontWeight.BOLD, size=16))
-                )
-            
+                report_results.controls.append(ft.ListTile(leading=ft.Icon(ft.icons.CHECK_CIRCLE, color=ft.colors.GREEN), title=ft.Text(f"#{o_id} {p}"), subtitle=ft.Text(d), trailing=ft.Text(f"₹{com}", weight=ft.FontWeight.BOLD, size=16)))
             total_report_comm.value = f"Total Cleared: ₹{total}"
             trigger_success_notification()
             page.update()
@@ -184,23 +212,14 @@ def main(page: ft.Page):
             content=ft.Column([
                 ft.Row([start_date, end_date], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 ft.ElevatedButton("Generate Report", icon=ft.icons.INSERT_CHART, on_click=generate_report, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=15), bgcolor=ft.colors.TEAL, color=ft.colors.WHITE),
-                ft.Divider(),
-                ft.Container(content=total_report_comm, padding=10, bgcolor=ft.colors.GREEN_50, border_radius=10),
-                report_results
+                ft.Divider(), ft.Container(content=total_report_comm, padding=10, bgcolor=ft.colors.GREEN_50, border_radius=10), report_results
             ])
         )
 
         page.add(
-            ft.AppBar(
-                title=ft.Text("Admin Hub", weight=ft.FontWeight.BOLD, color=ft.colors.WHITE), 
-                bgcolor=ft.colors.TEAL_700, 
-                center_title=True,
-                actions=[ft.IconButton(ft.icons.LOGOUT, icon_color=ft.colors.WHITE, on_click=lambda e: load_login())]
-            ),
+            ft.AppBar(title=ft.Text("Admin Hub", weight=ft.FontWeight.BOLD, color=ft.colors.WHITE), bgcolor=ft.colors.TEAL_700, center_title=True, actions=[ft.IconButton(ft.icons.LOGOUT, icon_color=ft.colors.WHITE, on_click=lambda e: load_login())]),
             ft.Tabs(
-                selected_index=0,
-                animation_duration=300,
-                expand=True,
+                selected_index=0, animation_duration=300, expand=True,
                 tabs=[
                     ft.Tab(text="Add", icon=ft.icons.ADD_BOX, content=add_tab_content),
                     ft.Tab(text="Orders", icon=ft.icons.LIST_ALT, content=orders_tab_content),
@@ -233,33 +252,25 @@ def main(page: ft.Page):
         c.execute("SELECT id, date, platform, qty, commission, status FROM orders WHERE boy_name=%s ORDER BY id DESC", (boy_name,))
         for row in c.fetchall():
             o_id, o_date, plat, q, com, stat = row
-            
             is_pending = stat == 'Pending'
             status_color = ft.colors.ORANGE if is_pending else (ft.colors.GREEN if stat == 'Received' else ft.colors.RED)
             status_icon = ft.icons.HOURGLASS_EMPTY if is_pending else (ft.icons.CHECK_CIRCLE if stat == 'Received' else ft.icons.CANCEL)
             
             action_ui = ft.ElevatedButton(
-                "Receive Payment", 
-                icon=ft.icons.CHECK_CIRCLE, 
+                "Receive Payment", icon=ft.icons.CHECK_CIRCLE, 
                 on_click=lambda e, oid=o_id, amt=com, bn=boy_name: mark_status_boy(oid, amt, bn), 
-                bgcolor=ft.colors.GREEN, 
-                color=ft.colors.WHITE, 
-                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))
+                bgcolor=ft.colors.GREEN, color=ft.colors.WHITE, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))
             ) if is_pending else ft.Row([ft.Icon(status_icon, color=status_color, size=18), ft.Text(stat, color=status_color, weight=ft.FontWeight.BOLD)])
 
             orders_list.controls.append(
                 ft.Card(
-                    elevation=3,
-                    shape=ft.RoundedRectangleBorder(radius=12),
+                    elevation=3, shape=ft.RoundedRectangleBorder(radius=12),
                     content=ft.Container(
                         padding=15, border_left=ft.border.BorderSide(5, status_color),
                         content=ft.Column([
                             ft.Row([ft.Text(f"#{o_id} {plat}", weight=ft.FontWeight.BOLD, size=16), ft.Text(o_date, color=ft.colors.GREY, size=12)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                             ft.Divider(height=10),
-                            ft.Row([
-                                ft.Text(f"Qty: {q}  |  ₹{com}", weight=ft.FontWeight.W_500),
-                                action_ui
-                            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+                            ft.Row([ft.Text(f"Qty: {q}  |  ₹{com}", weight=ft.FontWeight.W_500), action_ui], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
                         ])
                     )
                 )
@@ -268,18 +279,16 @@ def main(page: ft.Page):
         page.add(
             ft.AppBar(title=ft.Text(f"Hi, Ritesh!", weight=ft.FontWeight.BOLD, color=ft.colors.WHITE), bgcolor=ft.colors.GREEN_700, actions=[ft.IconButton(ft.icons.LOGOUT, icon_color=ft.colors.WHITE, on_click=lambda e: load_login())]),
             ft.Container(
-                padding=20,
-                expand=True,
+                padding=20, expand=True,
                 content=ft.Column([
-                    stats,
-                    ft.Divider(height=30, color=ft.colors.TRANSPARENT),
+                    stats, ft.Divider(height=30, color=ft.colors.TRANSPARENT),
                     ft.Text("Your Live Orders Feed", size=18, weight=ft.FontWeight.BOLD, color=ft.colors.BLUE_GREY_800),
                     orders_list
                 ])
             )
         )
 
-    # --- AUTO-LOGIN VIEW ---
+    # --- LOGIN VIEW ---
     def load_login():
         page.controls.clear()
         
@@ -288,7 +297,7 @@ def main(page: ft.Page):
             if pin == "26":          
                 trigger_success_notification()
                 load_boy_view()
-            elif pin == "69":        
+            elif pin == "69":        # Admin PIN set to 69
                 trigger_success_notification()
                 load_admin_view()
             elif len(pin) > 2:
@@ -297,94 +306,31 @@ def main(page: ft.Page):
                 page.update()
 
         pin_input = ft.TextField(
-            label="Enter 2-Digit PIN",
-            password=True,
-            can_reveal_password=True,
-            keyboard_type=ft.KeyboardType.NUMBER,
-            text_align=ft.TextAlign.CENTER,
-            width=250,
-            prefix_icon=ft.icons.LOCK_OUTLINE,
-            filled=True,
-            on_change=check_pin,
-            max_length=2
+            label="Enter 2-Digit PIN", password=True, can_reveal_password=True, keyboard_type=ft.KeyboardType.NUMBER,
+            text_align=ft.TextAlign.CENTER, width=250, prefix_icon=ft.icons.LOCK_OUTLINE, filled=True, on_change=check_pin, max_length=2
         )
 
         login_card = ft.Card(
-            elevation=10,
-            shape=ft.RoundedRectangleBorder(radius=20),
+            elevation=10, shape=ft.RoundedRectangleBorder(radius=20),
             content=ft.Container(
-                padding=40,
-                width=320,
-                bgcolor=ft.colors.WHITE,
-                border_radius=20,
+                padding=40, width=320, bgcolor=ft.colors.WHITE, border_radius=20,
                 content=ft.Column([
                     ft.Icon(ft.icons.VERIFIED_USER_ROUNDED, size=80, color=ft.colors.TEAL),
                     ft.Text("Secure Login", size=26, weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_900),
                     ft.Text("Enter your pin to continue", size=14, color=ft.colors.GREY_600),
-                    ft.Divider(height=30, color=ft.colors.TRANSPARENT),
-                    pin_input
+                    ft.Divider(height=30, color=ft.colors.TRANSPARENT), pin_input
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
             )
         )
+        page.add(ft.Container(expand=True, bgcolor=ft.colors.TEAL_400, content=ft.Column([login_card], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)))
 
-        page.add(
-            ft.Container(
-                expand=True,
-                bgcolor=ft.colors.TEAL_400,
-                content=ft.Column([login_card], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-            )
-        )
+    # Start App smoothly
+    load_login()
 
-    # --- SYNCHRONOUS BOOT SEQUENCE (CRASH-FREE) ---
-    loading_ui = ft.Container(
-        expand=True,
-        bgcolor=ft.colors.BLUE_GREY_50,
-        content=ft.Column([
-            ft.ProgressRing(color=ft.colors.TEAL),
-            ft.Container(height=20),
-            ft.Text("Connecting to Secure Cloud...", size=16, weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_800)
-        ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-    )
-    page.add(loading_ui)
-    page.update()
-
+# --- THE MAGIC BYPASS ---
+# Yeh line Flet ko sirf Computer par hi force start karegi, Android app ko kill nahi hone degi.
+if __name__ == "__main__":
     try:
-        global conn, c
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        
-        conn = pg8000.dbapi.connect(
-            user="neondb_owner",
-            password="npg_EAdGHMcR4Bf5",
-            host="ep-dawn-tooth-b356n6lx-pooler.c-4.ap-southeast-1.aws.neon.tech",
-            database="neondb",
-            port=5432,
-            ssl_context=ssl_context
-        )
-        conn.autocommit = True
-        c = conn.cursor()
-        
-        c.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT UNIQUE, role TEXT, wallet NUMERIC DEFAULT 0);")
-        c.execute("CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, date TEXT, platform TEXT, qty INTEGER, commission NUMERIC, boy_name TEXT, status TEXT);")
-        c.execute("INSERT INTO users (id, name, role) VALUES (1, 'Admin', 'admin') ON CONFLICT (id) DO NOTHING;")
-        c.execute("INSERT INTO users (id, name, role) VALUES (2, 'Ritesh (Boy)', 'boy') ON CONFLICT (id) DO NOTHING;")
-        
-        load_login()
-    except Exception as e:
-        page.controls.clear()
-        page.add(
-            ft.Container(
-                expand=True, 
-                content=ft.Column([
-                    ft.Icon(ft.icons.WIFI_OFF, size=60, color=ft.colors.RED),
-                    ft.Text("Database Connection Failed!", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.RED),
-                    ft.Text(f"Detail: {e}", text_align=ft.TextAlign.CENTER)
-                ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-            )
-        )
-        page.update()
-
-# SAFE RUNNER FOR ANDROID & PC
-if hasattr(ft, 'app'):
-    ft.app(target=main)
+        ft.app(target=main)
+    except Exception:
+        pass
