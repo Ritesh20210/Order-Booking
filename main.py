@@ -253,6 +253,14 @@ def main(page: ft.Page):
         wallet = get_wallet(boy_name)
         pending = get_pending(boy_name)
 
+        # Status Update function specifically for the Boy
+        def mark_status_boy(order_id, amount, b_name):
+            c.execute("UPDATE orders SET status='Received' WHERE id=%s", (order_id,))
+            c.execute("UPDATE users SET wallet = wallet + %s WHERE name=%s", (amount, b_name))
+            trigger_success_notification()
+            show_toast(f"Commission ₹{amount} Added to Wallet!")
+            load_boy_view(b_name) # Refresh page to update stats
+
         stats = ft.Row([
             ft.Card(elevation=6, expand=True, color=ft.Colors.GREEN_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.Icons.ACCOUNT_BALANCE_WALLET, color=ft.Colors.GREEN), ft.Text("Cleared", size=12, color=ft.Colors.GREY_700), ft.Text(f"₹{wallet}", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_800)]))),
             ft.Card(elevation=6, expand=True, color=ft.Colors.ORANGE_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.Icons.PENDING_ACTIONS, color=ft.Colors.ORANGE), ft.Text("Pending", size=12, color=ft.Colors.GREY_700), ft.Text(f"₹{pending}", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.ORANGE_800)]))),
@@ -262,9 +270,21 @@ def main(page: ft.Page):
         c.execute("SELECT id, date, platform, qty, commission, status FROM orders WHERE boy_name=%s ORDER BY id DESC", (boy_name,))
         for row in c.fetchall():
             o_id, o_date, plat, q, com, stat = row
-            status_color = ft.Colors.ORANGE if stat == 'Pending' else (ft.Colors.GREEN if stat == 'Received' else ft.Colors.RED)
-            status_icon = ft.Icons.HOURGLASS_EMPTY if stat == 'Pending' else (ft.Icons.CHECK_CIRCLE if stat == 'Received' else ft.Icons.CANCEL)
             
+            is_pending = stat == 'Pending'
+            status_color = ft.Colors.ORANGE if is_pending else (ft.Colors.GREEN if stat == 'Received' else ft.Colors.RED)
+            status_icon = ft.Icons.HOURGLASS_EMPTY if is_pending else (ft.Icons.CHECK_CIRCLE if stat == 'Received' else ft.Icons.CANCEL)
+            
+            # Receive button for Boy (Only shows if order is pending)
+            action_ui = ft.ElevatedButton(
+                "Receive Payment", 
+                icon=ft.Icons.CHECK_CIRCLE, 
+                on_click=lambda e, oid=o_id, amt=com, bn=boy_name: mark_status_boy(oid, amt, bn), 
+                bgcolor=ft.Colors.GREEN, 
+                color=ft.Colors.WHITE, 
+                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))
+            ) if is_pending else ft.Row([ft.Icon(status_icon, color=status_color, size=18), ft.Text(stat, color=status_color, weight=ft.FontWeight.BOLD)])
+
             orders_list.controls.append(
                 ft.Card(
                     elevation=3,
@@ -276,7 +296,7 @@ def main(page: ft.Page):
                             ft.Divider(height=10),
                             ft.Row([
                                 ft.Text(f"Qty: {q}  |  ₹{com}", weight=ft.FontWeight.W_500),
-                                ft.Row([ft.Icon(status_icon, color=status_color, size=18), ft.Text(stat, color=status_color, weight=ft.FontWeight.BOLD)])
+                                action_ui
                             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
                         ])
                     )
