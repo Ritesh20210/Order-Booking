@@ -38,12 +38,19 @@ def init_db():
 
 # --- MAIN APP LOGIC ---
 def main(page: ft.Page):
+    # --- CRASH PREVENTER ---
+    # Agar koi background error aata hai, toh app band nahi hoga balki screen par dikhayega
+    def on_app_error(e):
+        page.controls.clear()
+        page.add(ft.Text(f"System Alert: {e.data}", color=ft.colors.RED, weight=ft.FontWeight.BOLD))
+        page.update()
+    page.on_error = on_app_error
+
     # --- APP CONFIGURATION ---
+    # (Window width/height hatayi gayi hai taaki Android par app crash na ho)
     page.title = "Order & Commission App"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.theme = ft.Theme(color_scheme_seed=ft.colors.TEAL, use_material3=True)
-    page.window_width = 400
-    page.window_height = 700
     page.padding = 0
     page.bgcolor = ft.colors.BLUE_GREY_50
 
@@ -368,7 +375,6 @@ def main(page: ft.Page):
         )
 
     # --- ANTI-CRASH STARTUP LOGIC ---
-    # 1. Pehle user ko turant ek loading screen dikhayenge taaki Android app kill na kare
     loading_ui = ft.Container(
         expand=True,
         bgcolor=ft.colors.BLUE_GREY_50,
@@ -382,14 +388,11 @@ def main(page: ft.Page):
     page.add(loading_ui)
     page.update()
 
-    # 2. UI load hone ke baad Cloud Database se connect karenge
     try:
         init_db()
-        # Connect hote hi Loading screen hata kar Login page le aayenge
         page.controls.clear()
         load_login()
     except Exception as e:
-        # Agar net nahi chala ya DB fail hua, toh app band nahi hoga, user ko yeh error dikhega
         page.controls.clear()
         page.add(
             ft.Container(
