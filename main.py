@@ -5,7 +5,7 @@ from datetime import datetime
 conn = None
 c = None
 
-# Database connection function (Sirf PIN daalne ke baad chalega taaki Android turant app open kare)
+# Database connection function
 def init_db():
     global conn, c
     if conn is not None:
@@ -34,7 +34,6 @@ def init_db():
     c.execute("CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, date TEXT, platform TEXT, qty INTEGER, commission NUMERIC, boy_name TEXT, status TEXT);")
     c.execute("INSERT INTO users (id, name, role) VALUES (1, 'Admin', 'admin') ON CONFLICT (id) DO NOTHING;")
     c.execute("INSERT INTO users (id, name, role) VALUES (2, 'Ritesh (Boy)', 'boy') ON CONFLICT (id) DO NOTHING;")
-
 
 def main(page: ft.Page):
     # --- APP CONFIGURATION ---
@@ -276,7 +275,6 @@ def main(page: ft.Page):
     # --- INSTANT LOGIN VIEW ---
     def load_login():
         page.controls.clear()
-        
         error_text = ft.Text("", color=ft.colors.RED, size=14, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
 
         def attempt_login(e):
@@ -327,9 +325,5 @@ def main(page: ft.Page):
 
     load_login()
 
-# --- THE PERFECT CRASH SHIELD ---
-# Yeh block PC par ft.app chalayega, lekin Android par chup-chaap bypass ho jayega
-try:
-    ft.app(target=main)
-except AttributeError:
-    pass
+# THE PROPER START (Bina kisi hack ke)
+ft.app(target=main)
