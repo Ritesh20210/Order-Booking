@@ -1,26 +1,38 @@
 import flet as ft
-import psycopg2
+import pg8000.dbapi
+import ssl
 from datetime import datetime
 
 # --- CLOUD DATABASE SETUP ---
 def init_db():
-    # Your live Neon database URL
-    DB_URL = "postgresql://neondb_owner:npg_EAdGHMcR4Bf5@ep-dawn-tooth-b356n6lx-pooler.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+    # Neon.tech database setup for pure Python (Android compatible)
+    ssl_context = ssl.create_default_context()
     
-    conn = psycopg2.connect(DB_URL)
+    conn = pg8000.dbapi.connect(
+        user="neondb_owner",
+        password="npg_EAdGHMcR4Bf5",
+        host="ep-dawn-tooth-b356n6lx-pooler.c-4.ap-southeast-1.aws.neon.tech",
+        database="neondb",
+        port=5432,
+        ssl_context=ssl_context
+    )
+    
     conn.autocommit = True # Ensures data saves immediately to the cloud
     c = conn.cursor()
     
     # Postgres uses SERIAL for auto-increment and ON CONFLICT DO NOTHING
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT UNIQUE, role TEXT, wallet NUMERIC DEFAULT 0);
+    """)
+    c.execute("""
         CREATE TABLE IF NOT EXISTS orders (
             id SERIAL PRIMARY KEY, 
             date TEXT, platform TEXT, qty INTEGER, commission NUMERIC, boy_name TEXT, status TEXT
         );
-        INSERT INTO users (id, name, role) VALUES (1, 'Admin', 'admin') ON CONFLICT (id) DO NOTHING;
-        INSERT INTO users (id, name, role) VALUES (2, 'Ritesh (Boy)', 'boy') ON CONFLICT (id) DO NOTHING;
     """)
+    c.execute("INSERT INTO users (id, name, role) VALUES (1, 'Admin', 'admin') ON CONFLICT (id) DO NOTHING;")
+    c.execute("INSERT INTO users (id, name, role) VALUES (2, 'Ritesh (Boy)', 'boy') ON CONFLICT (id) DO NOTHING;")
+    
     return conn, c
 
 conn, c = init_db()
@@ -173,7 +185,7 @@ def main(page: ft.Page):
         )
 
     # --- ORDER BOY VIEW ---
-    def load_boy_view(boy_name="Injar (Boy)"):
+    def load_boy_view(boy_name="Ritesh (Boy)"):
         page.controls.clear()
         
         wallet = get_wallet(boy_name)
@@ -212,7 +224,7 @@ def main(page: ft.Page):
             pin = e.control.value
             if pin == "26":          
                 load_boy_view()
-            elif pin == "7869":        
+            elif pin == "99":        
                 load_admin_view()
 
         pin_input = ft.TextField(
