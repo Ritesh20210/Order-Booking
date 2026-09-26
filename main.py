@@ -46,14 +46,11 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = ft.Colors.BLUE_GREY_50
 
-    # --- NOTIFICATION SOUND & VIBRATION ---
-    # Using a reliable public notification sound URL
-    success_sound = ft.Audio(src="https://www.soundjay.com/buttons/sounds/button-09a.mp3", autoplay=False)
+    # --- VIBRATION (HAPTIC FEEDBACK) ---
     haptic = ft.HapticFeedback()
-    page.overlay.extend([success_sound, haptic])
+    page.overlay.append(haptic)
 
     def trigger_success_notification():
-        success_sound.play()
         haptic.heavy_impact()
 
     def show_toast(message, color=ft.Colors.GREEN):
@@ -81,7 +78,7 @@ def main(page: ft.Page):
     def load_admin_view():
         page.controls.clear()
         
-        # --- Add Order Tab ---
+        # Add Order
         platform = ft.Dropdown(options=[ft.dropdown.Option("Myntra"), ft.dropdown.Option("Meesho"), ft.dropdown.Option("Flipkart")], label="Platform", prefix_icon=ft.Icons.SHOPPING_BAG, filled=True, border_radius=10)
         qty = ft.TextField(label="Quantity", keyboard_type=ft.KeyboardType.NUMBER, prefix_icon=ft.Icons.NUMBERS, filled=True, border_radius=10)
         comm = ft.TextField(label="Commission (₹)", keyboard_type=ft.KeyboardType.NUMBER, prefix_icon=ft.Icons.CURRENCY_RUPEE, filled=True, border_radius=10)
@@ -110,7 +107,7 @@ def main(page: ft.Page):
             ])
         )
         
-        # --- Ledger Tab ---
+        # Ledger
         adv_amt = ft.TextField(label="Advance Amount (₹)", keyboard_type=ft.KeyboardType.NUMBER, prefix_icon=ft.Icons.MONEY, filled=True, border_radius=10)
         boy_adv = ft.Dropdown(options=[ft.dropdown.Option("Ritesh (Boy)")], label="Select Boy", prefix_icon=ft.Icons.PERSON, filled=True, border_radius=10)
         
@@ -132,7 +129,7 @@ def main(page: ft.Page):
             ])
         )
 
-        # --- Status Update Helper ---
+        # Status Update
         def mark_status(order_id, amount, b_name, new_status):
             c.execute("UPDATE orders SET status=%s WHERE id=%s", (new_status, order_id))
             if new_status == 'Received':
@@ -143,7 +140,7 @@ def main(page: ft.Page):
                 show_toast(f"Order #{order_id} Cancelled!", ft.Colors.RED)
             load_admin_view()
 
-        # --- Orders List Tab ---
+        # Orders List
         search_bar = ft.TextField(label="Search by ID or Platform...", prefix_icon=ft.Icons.SEARCH, on_change=lambda e: filter_orders(e.control.value), border_radius=30, filled=True)
         orders_list = ft.ListView(expand=True, spacing=15, padding=10)
         
@@ -188,7 +185,7 @@ def main(page: ft.Page):
         render_orders()
         orders_tab_content = ft.Container(padding=10, content=ft.Column([search_bar, orders_list], expand=True))
 
-        # --- Reports Tab ---
+        # Reports
         start_date = ft.TextField(label="Start (YYYY-MM-DD)", width=170, prefix_icon=ft.Icons.DATE_RANGE, filled=True, border_radius=10)
         end_date = ft.TextField(label="End (YYYY-MM-DD)", width=170, prefix_icon=ft.Icons.DATE_RANGE, filled=True, border_radius=10)
         report_results = ft.ListView(expand=True, spacing=10)
@@ -256,7 +253,6 @@ def main(page: ft.Page):
         wallet = get_wallet(boy_name)
         pending = get_pending(boy_name)
 
-        # Modern Stat Cards
         stats = ft.Row([
             ft.Card(elevation=6, expand=True, color=ft.Colors.GREEN_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.Icons.ACCOUNT_BALANCE_WALLET, color=ft.Colors.GREEN), ft.Text("Cleared Wallet", size=12, color=ft.Colors.GREY_700), ft.Text(f"₹{wallet}", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_800)]))),
             ft.Card(elevation=6, expand=True, color=ft.Colors.ORANGE_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.Icons.PENDING_ACTIONS, color=ft.Colors.ORANGE), ft.Text("Pending Comm.", size=12, color=ft.Colors.GREY_700), ft.Text(f"₹{pending}", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.ORANGE_800)]))),
@@ -301,7 +297,7 @@ def main(page: ft.Page):
             )
         )
 
-    # --- AUTO-LOGIN VIEW (MODERN) ---
+    # --- AUTO-LOGIN VIEW ---
     def load_login():
         page.controls.clear()
         
