@@ -1,12 +1,11 @@
 import flet as ft
 from datetime import datetime
-import traceback
 
 # Global Database Variables
 conn = None
 c = None
 
-# Database connection function (Sirf PIN daalne ke baad chalega taaki app crash na ho)
+# Database connection function (Sirf PIN daalne ke baad chalega taaki Android turant app open kare)
 def init_db():
     global conn, c
     if conn is not None:
@@ -15,7 +14,7 @@ def init_db():
     import pg8000.dbapi
     import ssl
     
-    # Android SSL bypass
+    # Android SSL bypass (Certificate error se bachne ke liye)
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
@@ -328,5 +327,9 @@ def main(page: ft.Page):
 
     load_login()
 
-# PERFECT RUNNER
-ft.app(target=main)
+# --- THE PERFECT CRASH SHIELD ---
+# Yeh block PC par ft.app chalayega, lekin Android par chup-chaap bypass ho jayega
+try:
+    ft.app(target=main)
+except AttributeError:
+    pass
