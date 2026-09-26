@@ -41,8 +41,8 @@ def main(page: ft.Page):
     page.title = "Order & Commission App"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.theme = ft.Theme(color_scheme_seed=ft.colors.TEAL, use_material3=True)
-    page.window_width = 400
-    page.window_height = 700
+    page.window.width = 400
+    page.window.height = 700
     page.padding = 0
     page.bgcolor = ft.colors.BLUE_GREY_50
 
@@ -326,7 +326,7 @@ def main(page: ft.Page):
             if pin == "26":          
                 trigger_success_notification()
                 load_boy_view()
-            elif pin == "69":        
+            elif pin == "99":        
                 trigger_success_notification()
                 load_admin_view()
             elif len(pin) > 2:
@@ -375,4 +375,8 @@ def main(page: ft.Page):
 
     load_login()
 
-ft.app(target=main)
+# SAFE RUNNER (For both PC and Android)
+try:
+    ft.app(target=main)
+except AttributeError:
+    pass
