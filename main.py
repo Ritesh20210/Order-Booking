@@ -46,7 +46,7 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = ft.Colors.BLUE_GREY_50
 
-    # --- VIBRATION (HAPTIC FEEDBACK) ---
+    # --- VIBRATION (HAPTIC FEEDBACK ONLY - NO AUDIO) ---
     haptic = ft.HapticFeedback()
     page.overlay.append(haptic)
 
@@ -254,8 +254,8 @@ def main(page: ft.Page):
         pending = get_pending(boy_name)
 
         stats = ft.Row([
-            ft.Card(elevation=6, expand=True, color=ft.Colors.GREEN_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.Icons.ACCOUNT_BALANCE_WALLET, color=ft.Colors.GREEN), ft.Text("Cleared Wallet", size=12, color=ft.Colors.GREY_700), ft.Text(f"₹{wallet}", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_800)]))),
-            ft.Card(elevation=6, expand=True, color=ft.Colors.ORANGE_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.Icons.PENDING_ACTIONS, color=ft.Colors.ORANGE), ft.Text("Pending Comm.", size=12, color=ft.Colors.GREY_700), ft.Text(f"₹{pending}", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.ORANGE_800)]))),
+            ft.Card(elevation=6, expand=True, color=ft.Colors.GREEN_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.Icons.ACCOUNT_BALANCE_WALLET, color=ft.Colors.GREEN), ft.Text("Cleared", size=12, color=ft.Colors.GREY_700), ft.Text(f"₹{wallet}", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_800)]))),
+            ft.Card(elevation=6, expand=True, color=ft.Colors.ORANGE_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.Icons.PENDING_ACTIONS, color=ft.Colors.ORANGE), ft.Text("Pending", size=12, color=ft.Colors.GREY_700), ft.Text(f"₹{pending}", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.ORANGE_800)]))),
         ], spacing=15)
 
         orders_list = ft.ListView(expand=True, spacing=15)
