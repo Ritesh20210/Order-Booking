@@ -1,40 +1,12 @@
 import flet as ft
 import pg8000.dbapi
 import ssl
-import threading
 from datetime import datetime
 
-# Global variables for Database
+# Global Database Variables
 conn = None
 c = None
 
-# --- CLOUD DATABASE SETUP ---
-def init_db():
-    global conn, c
-    
-    # ANDROID SSL FIX: Bypass strict certificate verification which crashes Android Flet apps
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-    
-    conn = pg8000.dbapi.connect(
-        user="neondb_owner",
-        password="npg_EAdGHMcR4Bf5",
-        host="ep-dawn-tooth-b356n6lx-pooler.c-4.ap-southeast-1.aws.neon.tech",
-        database="neondb",
-        port=5432,
-        ssl_context=ssl_context
-    )
-    
-    conn.autocommit = True
-    c = conn.cursor()
-    
-    c.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT UNIQUE, role TEXT, wallet NUMERIC DEFAULT 0);")
-    c.execute("CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, date TEXT, platform TEXT, qty INTEGER, commission NUMERIC, boy_name TEXT, status TEXT);")
-    c.execute("INSERT INTO users (id, name, role) VALUES (1, 'Admin', 'admin') ON CONFLICT (id) DO NOTHING;")
-    c.execute("INSERT INTO users (id, name, role) VALUES (2, 'Ritesh (Boy)', 'boy') ON CONFLICT (id) DO NOTHING;")
-
-# --- MAIN APP LOGIC ---
 def main(page: ft.Page):
     # --- APP CONFIGURATION ---
     page.title = "Order & Commission App"
@@ -316,7 +288,7 @@ def main(page: ft.Page):
             if pin == "26":          
                 trigger_success_notification()
                 load_boy_view()
-            elif pin == "99":        
+            elif pin == "69":        
                 trigger_success_notification()
                 load_admin_view()
             elif len(pin) > 2:
@@ -363,8 +335,8 @@ def main(page: ft.Page):
             )
         )
 
-    # --- ANDROID ANTI-CRASH STARTUP LOGIC ---
-    # 1. UI Setup - Dikhate hi screen load ho jayegi (Android khush)
+    # --- SYNCHRONOUS BOOT SEQUENCE ---
+    # 1. Loading UI Dikhayein
     loading_ui = ft.Container(
         expand=True,
         bgcolor=ft.colors.BLUE_GREY_50,
@@ -377,33 +349,44 @@ def main(page: ft.Page):
     page.add(loading_ui)
     page.update()
 
-    # 2. Database Background Thread - App block nahi hoga
-    def connect_db_in_background():
-        try:
-            init_db()
-            page.controls.clear()
-            load_login()
-            page.update()
-        except Exception as e:
-            # Agar fail hua toh force close nahi, balki error message screen par dikhega!
-            page.controls.clear()
-            page.add(
-                ft.Container(
-                    expand=True, 
-                    content=ft.Column([
-                        ft.Icon(ft.icons.ERROR, size=60, color=ft.colors.RED),
-                        ft.Text("System Error", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.RED),
-                        ft.Text(f"Detail: {str(e)}", text_align=ft.TextAlign.CENTER)
-                    ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-                )
+    # 2. Database Setup karein bina extra threads ke
+    try:
+        global conn, c
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
+        conn = pg8000.dbapi.connect(
+            user="neondb_owner",
+            password="npg_EAdGHMcR4Bf5",
+            host="ep-dawn-tooth-b356n6lx-pooler.c-4.ap-southeast-1.aws.neon.tech",
+            database="neondb",
+            port=5432,
+            ssl_context=ssl_context
+        )
+        conn.autocommit = True
+        c = conn.cursor()
+        
+        c.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT UNIQUE, role TEXT, wallet NUMERIC DEFAULT 0);")
+        c.execute("CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, date TEXT, platform TEXT, qty INTEGER, commission NUMERIC, boy_name TEXT, status TEXT);")
+        c.execute("INSERT INTO users (id, name, role) VALUES (1, 'Admin', 'admin') ON CONFLICT (id) DO NOTHING;")
+        c.execute("INSERT INTO users (id, name, role) VALUES (2, 'Ritesh (Boy)', 'boy') ON CONFLICT (id) DO NOTHING;")
+        
+        # 3. Connection success hone par Login screen laayein
+        load_login()
+    except Exception as e:
+        page.controls.clear()
+        page.add(
+            ft.Container(
+                expand=True, 
+                content=ft.Column([
+                    ft.Icon(ft.icons.WIFI_OFF, size=60, color=ft.colors.RED),
+                    ft.Text("Database Connection Failed!", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.RED),
+                    ft.Text(f"Detail: {e}", text_align=ft.TextAlign.CENTER)
+                ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
             )
-            page.update()
+        )
+        page.update()
 
-    # Start the background task
-    threading.Thread(target=connect_db_in_background, daemon=True).start()
-
-# SAFE RUNNER
-try:
-    ft.app(target=main)
-except AttributeError:
-    pass
+# FINAL RAW EXECUTION
+ft.app(main)
