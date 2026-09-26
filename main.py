@@ -40,11 +40,11 @@ def main(page: ft.Page):
     # --- APP CONFIGURATION ---
     page.title = "Order & Commission App"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.theme = ft.Theme(color_scheme_seed=ft.Colors.TEAL, use_material3=True)
-    page.window.width = 400
-    page.window.height = 700
+    page.theme = ft.Theme(color_scheme_seed=ft.colors.TEAL, use_material3=True)
+    page.window_width = 400
+    page.window_height = 700
     page.padding = 0
-    page.bgcolor = ft.Colors.BLUE_GREY_50
+    page.bgcolor = ft.colors.BLUE_GREY_50
 
     # --- VIBRATION (HAPTIC FEEDBACK ONLY) ---
     haptic = ft.HapticFeedback()
@@ -53,9 +53,9 @@ def main(page: ft.Page):
     def trigger_success_notification():
         haptic.heavy_impact()
 
-    def show_toast(message, color=ft.Colors.GREEN):
+    def show_toast(message, color=ft.colors.GREEN):
         page.snack_bar = ft.SnackBar(
-            ft.Text(message, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD), 
+            ft.Text(message, color=ft.colors.WHITE, weight=ft.FontWeight.BOLD), 
             bgcolor=color, 
             behavior=ft.SnackBarBehavior.FLOATING,
             shape=ft.RoundedRectangleBorder(radius=10)
@@ -79,10 +79,10 @@ def main(page: ft.Page):
         page.controls.clear()
         
         # Add Order
-        platform = ft.Dropdown(options=[ft.dropdown.Option("Myntra"), ft.dropdown.Option("Meesho"), ft.dropdown.Option("Flipkart")], label="Platform", prefix_icon=ft.Icons.SHOPPING_BAG, filled=True, border_radius=10)
-        qty = ft.TextField(label="Quantity", keyboard_type=ft.KeyboardType.NUMBER, prefix_icon=ft.Icons.NUMBERS, filled=True, border_radius=10)
-        comm = ft.TextField(label="Commission (₹)", keyboard_type=ft.KeyboardType.NUMBER, prefix_icon=ft.Icons.CURRENCY_RUPEE, filled=True, border_radius=10)
-        boy = ft.Dropdown(options=[ft.dropdown.Option("Ritesh (Boy)")], label="Assign To", prefix_icon=ft.Icons.PERSON, filled=True, border_radius=10)
+        platform = ft.Dropdown(options=[ft.dropdown.Option("Myntra"), ft.dropdown.Option("Meesho"), ft.dropdown.Option("Flipkart")], label="Platform", filled=True)
+        qty = ft.TextField(label="Quantity", keyboard_type=ft.KeyboardType.NUMBER, prefix_icon=ft.icons.NUMBERS, filled=True)
+        comm = ft.TextField(label="Commission (₹)", keyboard_type=ft.KeyboardType.NUMBER, prefix_icon=ft.icons.CURRENCY_RUPEE, filled=True)
+        boy = ft.Dropdown(options=[ft.dropdown.Option("Ritesh (Boy)")], label="Assign To", filled=True)
         
         def add_order(e):
             if platform.value and qty.value and comm.value and boy.value:
@@ -94,22 +94,22 @@ def main(page: ft.Page):
                 platform.value = qty.value = comm.value = boy.value = None
                 load_admin_view()
             else:
-                show_toast("Please fill all fields!", ft.Colors.RED)
+                show_toast("Please fill all fields!", ft.colors.RED)
 
         add_tab_content = ft.Container(
             padding=20,
             content=ft.Column([
-                ft.Text("Dispatch New Order", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.TEAL_800),
-                ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+                ft.Text("Dispatch New Order", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_800),
+                ft.Divider(height=20, color=ft.colors.TRANSPARENT),
                 platform, qty, comm, boy,
                 ft.Container(height=10),
-                ft.ElevatedButton("Dispatch Order", icon=ft.Icons.SEND, on_click=add_order, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=15), expand=True, bgcolor=ft.Colors.TEAL, color=ft.Colors.WHITE)
+                ft.ElevatedButton("Dispatch Order", icon=ft.icons.SEND, on_click=add_order, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=15), expand=True, bgcolor=ft.colors.TEAL, color=ft.colors.WHITE)
             ])
         )
         
         # Ledger
-        adv_amt = ft.TextField(label="Advance Amount (₹)", keyboard_type=ft.KeyboardType.NUMBER, prefix_icon=ft.Icons.MONEY, filled=True, border_radius=10)
-        boy_adv = ft.Dropdown(options=[ft.dropdown.Option("Ritesh (Boy)")], label="Select Boy", prefix_icon=ft.Icons.PERSON, filled=True, border_radius=10)
+        adv_amt = ft.TextField(label="Advance Amount (₹)", keyboard_type=ft.KeyboardType.NUMBER, prefix_icon=ft.icons.MONEY, filled=True)
+        boy_adv = ft.Dropdown(options=[ft.dropdown.Option("Ritesh (Boy)")], label="Select Boy", filled=True)
         
         def give_advance(e):
             if adv_amt.value and boy_adv.value:
@@ -121,11 +121,11 @@ def main(page: ft.Page):
         ledger_tab_content = ft.Container(
             padding=20,
             content=ft.Column([
-                ft.Text("Issue Advance Payment", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.TEAL_800),
-                ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+                ft.Text("Issue Advance Payment", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_800),
+                ft.Divider(height=20, color=ft.colors.TRANSPARENT),
                 boy_adv, adv_amt,
                 ft.Container(height=10),
-                ft.ElevatedButton("Pay Advance", icon=ft.Icons.PAYMENT, on_click=give_advance, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=15), bgcolor=ft.Colors.TEAL, color=ft.Colors.WHITE)
+                ft.ElevatedButton("Pay Advance", icon=ft.icons.PAYMENT, on_click=give_advance, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=15), bgcolor=ft.colors.TEAL, color=ft.colors.WHITE)
             ])
         )
 
@@ -137,11 +137,11 @@ def main(page: ft.Page):
                 trigger_success_notification()
                 show_toast(f"Order #{order_id} Received!")
             else:
-                show_toast(f"Order #{order_id} Cancelled!", ft.Colors.RED)
+                show_toast(f"Order #{order_id} Cancelled!", ft.colors.RED)
             load_admin_view()
 
         # Orders List
-        search_bar = ft.TextField(label="Search by ID or Platform...", prefix_icon=ft.Icons.SEARCH, on_change=lambda e: filter_orders(e.control.value), border_radius=30, filled=True)
+        search_bar = ft.TextField(label="Search by ID or Platform...", prefix_icon=ft.icons.SEARCH, on_change=lambda e: filter_orders(e.control.value), filled=True)
         orders_list = ft.ListView(expand=True, spacing=15, padding=10)
         
         def render_orders(search_text=""):
@@ -152,12 +152,12 @@ def main(page: ft.Page):
                 o_id, o_date, plat, q, com, b_name, stat = row
                 
                 is_pending = stat == 'Pending'
-                status_color = ft.Colors.ORANGE if is_pending else (ft.Colors.GREEN if stat == 'Received' else ft.Colors.RED)
-                status_icon = ft.Icons.HOURGLASS_EMPTY if is_pending else (ft.Icons.CHECK_CIRCLE if stat == 'Received' else ft.Icons.CANCEL)
+                status_color = ft.colors.ORANGE if is_pending else (ft.colors.GREEN if stat == 'Received' else ft.colors.RED)
+                status_icon = ft.icons.HOURGLASS_EMPTY if is_pending else (ft.icons.CHECK_CIRCLE if stat == 'Received' else ft.icons.CANCEL)
 
                 btn_row = ft.Row([
-                    ft.ElevatedButton("Receive", icon=ft.Icons.CHECK, on_click=lambda e, oid=o_id, amt=com, bn=b_name: mark_status(oid, amt, bn, 'Received'), bgcolor=ft.Colors.GREEN, color=ft.Colors.WHITE, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))),
-                    ft.ElevatedButton("Cancel", icon=ft.Icons.CLOSE, on_click=lambda e, oid=o_id, amt=com, bn=b_name: mark_status(oid, amt, bn, 'Cancelled'), bgcolor=ft.Colors.RED, color=ft.Colors.WHITE, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
+                    ft.ElevatedButton("Receive", icon=ft.icons.CHECK, on_click=lambda e, oid=o_id, amt=com, bn=b_name: mark_status(oid, amt, bn, 'Received'), bgcolor=ft.colors.GREEN, color=ft.colors.WHITE, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))),
+                    ft.ElevatedButton("Cancel", icon=ft.icons.CLOSE, on_click=lambda e, oid=o_id, amt=com, bn=b_name: mark_status(oid, amt, bn, 'Cancelled'), bgcolor=ft.colors.RED, color=ft.colors.WHITE, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)))
                 ]) if is_pending else ft.Row([ft.Icon(status_icon, color=status_color), ft.Text(f"{stat}", color=status_color, weight=ft.FontWeight.BOLD, size=16)])
 
                 orders_list.controls.append(
@@ -168,7 +168,7 @@ def main(page: ft.Page):
                             padding=15, 
                             border_left=ft.border.BorderSide(6, status_color),
                             content=ft.Column([
-                                ft.Row([ft.Text(f"#{o_id} {plat}", weight=ft.FontWeight.BOLD, size=18), ft.Text(o_date, color=ft.Colors.GREY, size=12)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                                ft.Row([ft.Text(f"#{o_id} {plat}", weight=ft.FontWeight.BOLD, size=18), ft.Text(o_date, color=ft.colors.GREY, size=12)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                                 ft.Divider(height=10),
                                 ft.Row([ft.Text(f"Qty: {q}", size=14), ft.Text(f"Comm: ₹{com}", size=14, weight=ft.FontWeight.BOLD), ft.Text(f"Boy: {b_name}", size=14)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                                 ft.Container(height=5),
@@ -186,15 +186,15 @@ def main(page: ft.Page):
         orders_tab_content = ft.Container(padding=10, content=ft.Column([search_bar, orders_list], expand=True))
 
         # Reports
-        start_date = ft.TextField(label="Start (YYYY-MM-DD)", width=170, prefix_icon=ft.Icons.DATE_RANGE, filled=True, border_radius=10)
-        end_date = ft.TextField(label="End (YYYY-MM-DD)", width=170, prefix_icon=ft.Icons.DATE_RANGE, filled=True, border_radius=10)
+        start_date = ft.TextField(label="Start (YYYY-MM-DD)", width=170, prefix_icon=ft.icons.DATE_RANGE, filled=True)
+        end_date = ft.TextField(label="End (YYYY-MM-DD)", width=170, prefix_icon=ft.icons.DATE_RANGE, filled=True)
         report_results = ft.ListView(expand=True, spacing=10)
-        total_report_comm = ft.Text("Total Cleared: ₹0.00", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700)
+        total_report_comm = ft.Text("Total Cleared: ₹0.00", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_700)
 
         def generate_report(e):
             report_results.controls.clear()
             if not start_date.value or not end_date.value:
-                show_toast("Enter both dates!", ft.Colors.RED)
+                show_toast("Enter both dates!", ft.colors.RED)
                 return
                 
             c.execute("""
@@ -208,7 +208,7 @@ def main(page: ft.Page):
                 o_id, d, p, com = row
                 total += float(com)
                 report_results.controls.append(
-                    ft.ListTile(leading=ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.GREEN), title=ft.Text(f"#{o_id} {p}"), subtitle=ft.Text(d), trailing=ft.Text(f"₹{com}", weight=ft.FontWeight.BOLD, size=16))
+                    ft.ListTile(leading=ft.Icon(ft.icons.CHECK_CIRCLE, color=ft.colors.GREEN), title=ft.Text(f"#{o_id} {p}"), subtitle=ft.Text(d), trailing=ft.Text(f"₹{com}", weight=ft.FontWeight.BOLD, size=16))
                 )
             
             total_report_comm.value = f"Total Cleared: ₹{total}"
@@ -219,29 +219,29 @@ def main(page: ft.Page):
             padding=15, 
             content=ft.Column([
                 ft.Row([start_date, end_date], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                ft.ElevatedButton("Generate Report", icon=ft.Icons.INSERT_CHART, on_click=generate_report, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=15), bgcolor=ft.Colors.TEAL, color=ft.Colors.WHITE),
+                ft.ElevatedButton("Generate Report", icon=ft.icons.INSERT_CHART, on_click=generate_report, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), padding=15), bgcolor=ft.colors.TEAL, color=ft.colors.WHITE),
                 ft.Divider(),
-                ft.Container(content=total_report_comm, padding=10, bgcolor=ft.Colors.GREEN_50, border_radius=10),
+                ft.Container(content=total_report_comm, padding=10, bgcolor=ft.colors.GREEN_50, border_radius=10),
                 report_results
             ])
         )
 
         page.add(
             ft.AppBar(
-                title=ft.Text("Admin Hub", weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE), 
-                bgcolor=ft.Colors.TEAL_700, 
+                title=ft.Text("Admin Hub", weight=ft.FontWeight.BOLD, color=ft.colors.WHITE), 
+                bgcolor=ft.colors.TEAL_700, 
                 center_title=True,
-                actions=[ft.IconButton(ft.Icons.LOGOUT, icon_color=ft.Colors.WHITE, on_click=lambda e: load_login())]
+                actions=[ft.IconButton(ft.icons.LOGOUT, icon_color=ft.colors.WHITE, on_click=lambda e: load_login())]
             ),
             ft.Tabs(
                 selected_index=0,
                 animation_duration=300,
                 expand=True,
                 tabs=[
-                    ft.Tab(text="Add", icon=ft.Icons.ADD_BOX, content=add_tab_content),
-                    ft.Tab(text="Orders", icon=ft.Icons.LIST_ALT, content=orders_tab_content),
-                    ft.Tab(text="Ledger", icon=ft.Icons.ACCOUNT_BALANCE_WALLET, content=ledger_tab_content),
-                    ft.Tab(text="Reports", icon=ft.Icons.BAR_CHART, content=report_tab_content),
+                    ft.Tab(text="Add", icon=ft.icons.ADD_BOX, content=add_tab_content),
+                    ft.Tab(text="Orders", icon=ft.icons.LIST_ALT, content=orders_tab_content),
+                    ft.Tab(text="Ledger", icon=ft.icons.ACCOUNT_BALANCE_WALLET, content=ledger_tab_content),
+                    ft.Tab(text="Reports", icon=ft.icons.BAR_CHART, content=report_tab_content),
                 ]
             )
         )
@@ -262,8 +262,8 @@ def main(page: ft.Page):
             load_boy_view(b_name) # Refresh page to update stats
 
         stats = ft.Row([
-            ft.Card(elevation=6, expand=True, color=ft.Colors.GREEN_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.Icons.ACCOUNT_BALANCE_WALLET, color=ft.Colors.GREEN), ft.Text("Cleared", size=12, color=ft.Colors.GREY_700), ft.Text(f"₹{wallet}", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_800)]))),
-            ft.Card(elevation=6, expand=True, color=ft.Colors.ORANGE_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.Icons.PENDING_ACTIONS, color=ft.Colors.ORANGE), ft.Text("Pending", size=12, color=ft.Colors.GREY_700), ft.Text(f"₹{pending}", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.ORANGE_800)]))),
+            ft.Card(elevation=6, expand=True, color=ft.colors.GREEN_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.icons.ACCOUNT_BALANCE_WALLET, color=ft.colors.GREEN), ft.Text("Cleared", size=12, color=ft.colors.GREY_700), ft.Text(f"₹{wallet}", size=20, weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_800)]))),
+            ft.Card(elevation=6, expand=True, color=ft.colors.ORANGE_50, shape=ft.RoundedRectangleBorder(radius=15), content=ft.Container(padding=15, content=ft.Column([ft.Icon(ft.icons.PENDING_ACTIONS, color=ft.colors.ORANGE), ft.Text("Pending", size=12, color=ft.colors.GREY_700), ft.Text(f"₹{pending}", size=20, weight=ft.FontWeight.BOLD, color=ft.colors.ORANGE_800)]))),
         ], spacing=15)
 
         orders_list = ft.ListView(expand=True, spacing=15)
@@ -272,16 +272,16 @@ def main(page: ft.Page):
             o_id, o_date, plat, q, com, stat = row
             
             is_pending = stat == 'Pending'
-            status_color = ft.Colors.ORANGE if is_pending else (ft.Colors.GREEN if stat == 'Received' else ft.Colors.RED)
-            status_icon = ft.Icons.HOURGLASS_EMPTY if is_pending else (ft.Icons.CHECK_CIRCLE if stat == 'Received' else ft.Icons.CANCEL)
+            status_color = ft.colors.ORANGE if is_pending else (ft.colors.GREEN if stat == 'Received' else ft.colors.RED)
+            status_icon = ft.icons.HOURGLASS_EMPTY if is_pending else (ft.icons.CHECK_CIRCLE if stat == 'Received' else ft.icons.CANCEL)
             
             # Receive button for Boy (Only shows if order is pending)
             action_ui = ft.ElevatedButton(
                 "Receive Payment", 
-                icon=ft.Icons.CHECK_CIRCLE, 
+                icon=ft.icons.CHECK_CIRCLE, 
                 on_click=lambda e, oid=o_id, amt=com, bn=boy_name: mark_status_boy(oid, amt, bn), 
-                bgcolor=ft.Colors.GREEN, 
-                color=ft.Colors.WHITE, 
+                bgcolor=ft.colors.GREEN, 
+                color=ft.colors.WHITE, 
                 style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))
             ) if is_pending else ft.Row([ft.Icon(status_icon, color=status_color, size=18), ft.Text(stat, color=status_color, weight=ft.FontWeight.BOLD)])
 
@@ -292,7 +292,7 @@ def main(page: ft.Page):
                     content=ft.Container(
                         padding=15, border_left=ft.border.BorderSide(5, status_color),
                         content=ft.Column([
-                            ft.Row([ft.Text(f"#{o_id} {plat}", weight=ft.FontWeight.BOLD, size=16), ft.Text(o_date, color=ft.Colors.GREY, size=12)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                            ft.Row([ft.Text(f"#{o_id} {plat}", weight=ft.FontWeight.BOLD, size=16), ft.Text(o_date, color=ft.colors.GREY, size=12)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                             ft.Divider(height=10),
                             ft.Row([
                                 ft.Text(f"Qty: {q}  |  ₹{com}", weight=ft.FontWeight.W_500),
@@ -304,14 +304,14 @@ def main(page: ft.Page):
             )
 
         page.add(
-            ft.AppBar(title=ft.Text(f"Hi, Ritesh!", weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN_700, actions=[ft.IconButton(ft.Icons.LOGOUT, icon_color=ft.Colors.WHITE, on_click=lambda e: load_login())]),
+            ft.AppBar(title=ft.Text(f"Hi, Ritesh!", weight=ft.FontWeight.BOLD, color=ft.colors.WHITE), bgcolor=ft.colors.GREEN_700, actions=[ft.IconButton(ft.icons.LOGOUT, icon_color=ft.colors.WHITE, on_click=lambda e: load_login())]),
             ft.Container(
                 padding=20,
                 expand=True,
                 content=ft.Column([
                     stats,
-                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
-                    ft.Text("Your Live Orders Feed", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_GREY_800),
+                    ft.Divider(height=30, color=ft.colors.TRANSPARENT),
+                    ft.Text("Your Live Orders Feed", size=18, weight=ft.FontWeight.BOLD, color=ft.colors.BLUE_GREY_800),
                     orders_list
                 ])
             )
@@ -326,11 +326,11 @@ def main(page: ft.Page):
             if pin == "26":          
                 trigger_success_notification()
                 load_boy_view()
-            elif pin == "99":        
+            elif pin == "69":        
                 trigger_success_notification()
                 load_admin_view()
             elif len(pin) > 2:
-                show_toast("Invalid PIN!", ft.Colors.RED)
+                show_toast("Invalid PIN!", ft.colors.RED)
                 e.control.value = ""
                 page.update()
 
@@ -341,8 +341,7 @@ def main(page: ft.Page):
             keyboard_type=ft.KeyboardType.NUMBER,
             text_align=ft.TextAlign.CENTER,
             width=250,
-            border_radius=15,
-            prefix_icon=ft.Icons.LOCK_OUTLINE,
+            prefix_icon=ft.icons.LOCK_OUTLINE,
             filled=True,
             on_change=check_pin,
             max_length=2
@@ -354,13 +353,13 @@ def main(page: ft.Page):
             content=ft.Container(
                 padding=40,
                 width=320,
-                bgcolor=ft.Colors.WHITE,
+                bgcolor=ft.colors.WHITE,
                 border_radius=20,
                 content=ft.Column([
-                    ft.Icon(ft.Icons.VERIFIED_USER_ROUNDED, size=80, color=ft.Colors.TEAL),
-                    ft.Text("Secure Login", size=26, weight=ft.FontWeight.BOLD, color=ft.Colors.TEAL_900),
-                    ft.Text("Enter your pin to continue", size=14, color=ft.Colors.GREY_600),
-                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    ft.Icon(ft.icons.VERIFIED_USER_ROUNDED, size=80, color=ft.colors.TEAL),
+                    ft.Text("Secure Login", size=26, weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_900),
+                    ft.Text("Enter your pin to continue", size=14, color=ft.colors.GREY_600),
+                    ft.Divider(height=30, color=ft.colors.TRANSPARENT),
                     pin_input
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
             )
@@ -369,12 +368,11 @@ def main(page: ft.Page):
         page.add(
             ft.Container(
                 expand=True,
-                bgcolor=ft.Colors.TEAL_400,
+                bgcolor=ft.colors.TEAL_400,
                 content=ft.Column([login_card], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
             )
         )
-        pin_input.focus()
 
     load_login()
 
-ft.run(main)
+ft.app(target=main)
