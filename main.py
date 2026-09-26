@@ -335,8 +335,7 @@ def main(page: ft.Page):
             )
         )
 
-    # --- SYNCHRONOUS BOOT SEQUENCE ---
-    # 1. Loading UI Dikhayein
+    # --- SYNCHRONOUS BOOT SEQUENCE (CRASH-FREE) ---
     loading_ui = ft.Container(
         expand=True,
         bgcolor=ft.colors.BLUE_GREY_50,
@@ -349,7 +348,6 @@ def main(page: ft.Page):
     page.add(loading_ui)
     page.update()
 
-    # 2. Database Setup karein bina extra threads ke
     try:
         global conn, c
         ssl_context = ssl.create_default_context()
@@ -372,7 +370,6 @@ def main(page: ft.Page):
         c.execute("INSERT INTO users (id, name, role) VALUES (1, 'Admin', 'admin') ON CONFLICT (id) DO NOTHING;")
         c.execute("INSERT INTO users (id, name, role) VALUES (2, 'Ritesh (Boy)', 'boy') ON CONFLICT (id) DO NOTHING;")
         
-        # 3. Connection success hone par Login screen laayein
         load_login()
     except Exception as e:
         page.controls.clear()
@@ -388,5 +385,6 @@ def main(page: ft.Page):
         )
         page.update()
 
-# FINAL RAW EXECUTION
-ft.app(main)
+# SAFE RUNNER FOR ANDROID & PC
+if hasattr(ft, 'app'):
+    ft.app(target=main)
