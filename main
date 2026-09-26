@@ -173,7 +173,7 @@ def main(page: ft.Page):
         )
 
     # --- ORDER BOY VIEW ---
-    def load_boy_view(boy_name="Ritesh (Boy)"):
+    def load_boy_view(boy_name="Injar (Boy)"):
         page.controls.clear()
         
         wallet = get_wallet(boy_name)
@@ -212,7 +212,7 @@ def main(page: ft.Page):
             pin = e.control.value
             if pin == "26":          
                 load_boy_view()
-            elif pin == "99":        
+            elif pin == "7869":        
                 load_admin_view()
 
         pin_input = ft.TextField(
