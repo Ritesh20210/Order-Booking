@@ -1,5 +1,40 @@
 import flet as ft
-import traceback
+from datetime import datetime
+
+# Global Database Variables
+conn = None
+c = None
+
+# Database connection function (Sirf PIN daalne ke baad chalega)
+def init_db():
+    global conn, c
+    if conn is not None:
+        return # Agar pehle se connect hai toh wapas connect nahi karega
+        
+    import pg8000.dbapi
+    import ssl
+    
+    # Android SSL bypass (Security block se bachne ke liye)
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    
+    conn = pg8000.dbapi.connect(
+        user="neondb_owner",
+        password="npg_EAdGHMcR4Bf5",
+        host="ep-dawn-tooth-b356n6lx-pooler.c-4.ap-southeast-1.aws.neon.tech",
+        database="neondb",
+        port=5432,
+        ssl_context=ssl_context
+    )
+    conn.autocommit = True
+    c = conn.cursor()
+    
+    c.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT UNIQUE, role TEXT, wallet NUMERIC DEFAULT 0);")
+    c.execute("CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, date TEXT, platform TEXT, qty INTEGER, commission NUMERIC, boy_name TEXT, status TEXT);")
+    c.execute("INSERT INTO users (id, name, role) VALUES (1, 'Admin', 'admin') ON CONFLICT (id) DO NOTHING;")
+    c.execute("INSERT INTO users (id, name, role) VALUES (2, 'Ritesh (Boy)', 'boy') ON CONFLICT (id) DO NOTHING;")
+
 
 def main(page: ft.Page):
     # --- APP CONFIGURATION ---
@@ -9,64 +44,15 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = ft.colors.BLUE_GREY_50
 
-    # --- X-RAY CRASH DETECTOR ---
-    # Agar Android par koi library missing hui ya internet fail hua, toh app band nahi hoga!
-    # Seedha screen par laal rang (red color) mein error aayega.
-    def show_error(title, error_detail):
-        page.controls.clear()
-        page.add(
-            ft.SafeArea(
-                ft.Column([
-                    ft.Icon(ft.icons.WARNING_AMBER, color=ft.colors.RED, size=60),
-                    ft.Text(f"CRASH PREVENTED: {title}", weight="bold", color=ft.colors.RED, size=20),
-                    ft.Text(str(error_detail), color=ft.colors.BLACK, size=14, weight="bold"),
-                    ft.Container(
-                        content=ft.Text(traceback.format_exc(), color=ft.colors.RED_900, size=11),
-                        bgcolor=ft.colors.RED_50, padding=10, border_radius=5
-                    )
-                ], scroll=ft.ScrollMode.AUTO, expand=True)
-            )
-        )
-        page.update()
-
-    # --- SAFE LIBRARY IMPORT & DATABASE CONNECTION ---
-    try:
-        import pg8000.dbapi
-        import ssl
-        from datetime import datetime
-
-        # Android SSL Bypass (Security lock ko bypass karna taaki block na ho)
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        
-        conn = pg8000.dbapi.connect(
-            user="neondb_owner",
-            password="npg_EAdGHMcR4Bf5",
-            host="ep-dawn-tooth-b356n6lx-pooler.c-4.ap-southeast-1.aws.neon.tech",
-            database="neondb",
-            port=5432,
-            ssl_context=ssl_context
-        )
-        conn.autocommit = True
-        c = conn.cursor()
-        
-        c.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT UNIQUE, role TEXT, wallet NUMERIC DEFAULT 0);")
-        c.execute("CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, date TEXT, platform TEXT, qty INTEGER, commission NUMERIC, boy_name TEXT, status TEXT);")
-        c.execute("INSERT INTO users (id, name, role) VALUES (1, 'Admin', 'admin') ON CONFLICT (id) DO NOTHING;")
-        c.execute("INSERT INTO users (id, name, role) VALUES (2, 'Ritesh (Boy)', 'boy') ON CONFLICT (id) DO NOTHING;")
-    
-    except Exception as e:
-        # Agar net nahi chala ya import fail hua, toh X-Ray function chalega
-        show_error("System Boot Error", e)
-        return
-
-    # --- UI & LOGIC COMPONENTS ---
+    # Haptic Feedback (Vibration)
     haptic = ft.HapticFeedback()
     page.overlay.append(haptic)
 
     def trigger_success_notification():
-        haptic.heavy_impact()
+        try:
+            haptic.heavy_impact()
+        except:
+            pass
 
     def show_toast(message, color=ft.colors.GREEN):
         page.snack_bar = ft.SnackBar(
@@ -76,6 +62,7 @@ def main(page: ft.Page):
         page.snack_bar.open = True
         page.update()
 
+    # --- HELPER FUNCTIONS ---
     def get_wallet(boy_name):
         c.execute("SELECT wallet FROM users WHERE name=%s", (boy_name,))
         res = c.fetchone()
@@ -288,26 +275,41 @@ def main(page: ft.Page):
             )
         )
 
-    # --- LOGIN VIEW ---
+    # --- INSTANT LOGIN VIEW (No DB connection at startup) ---
     def load_login():
         page.controls.clear()
         
-        def check_pin(e):
-            pin = e.control.value
-            if pin == "26":          
+        error_text = ft.Text("", color=ft.colors.RED, size=14, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
+
+        def attempt_login(e):
+            pin = pin_input.value
+            if pin not in ["26", "69"]:
+                if len(pin) >= 2:
+                    error_text.value = "Invalid PIN!"
+                    page.update()
+                return
+
+            # PIN sahi hai, ab database se connect karenge
+            error_text.color = ft.colors.TEAL
+            error_text.value = "Connecting to Secure Cloud..."
+            page.update()
+            
+            try:
+                init_db()  # Cloud connection
                 trigger_success_notification()
-                load_boy_view()
-            elif pin == "69":        # Admin PIN set to 69
-                trigger_success_notification()
-                load_admin_view()
-            elif len(pin) > 2:
-                show_toast("Invalid PIN!", ft.colors.RED)
-                e.control.value = ""
+                if pin == "26":
+                    load_boy_view()
+                elif pin == "69":
+                    load_admin_view()
+            except Exception as ex:
+                # Agar fail hua, toh app band nahi hoga, error dikhayega
+                error_text.color = ft.colors.RED
+                error_text.value = f"Connection Failed!\n{str(ex)}"
                 page.update()
 
         pin_input = ft.TextField(
             label="Enter 2-Digit PIN", password=True, can_reveal_password=True, keyboard_type=ft.KeyboardType.NUMBER,
-            text_align=ft.TextAlign.CENTER, width=250, prefix_icon=ft.icons.LOCK_OUTLINE, filled=True, on_change=check_pin, max_length=2
+            text_align=ft.TextAlign.CENTER, width=250, prefix_icon=ft.icons.LOCK_OUTLINE, filled=True, on_change=attempt_login, max_length=2
         )
 
         login_card = ft.Card(
@@ -318,19 +320,17 @@ def main(page: ft.Page):
                     ft.Icon(ft.icons.VERIFIED_USER_ROUNDED, size=80, color=ft.colors.TEAL),
                     ft.Text("Secure Login", size=26, weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_900),
                     ft.Text("Enter your pin to continue", size=14, color=ft.colors.GREY_600),
-                    ft.Divider(height=30, color=ft.colors.TRANSPARENT), pin_input
+                    ft.Divider(height=30, color=ft.colors.TRANSPARENT), 
+                    pin_input,
+                    ft.Container(height=10),
+                    error_text
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
             )
         )
         page.add(ft.Container(expand=True, bgcolor=ft.colors.TEAL_400, content=ft.Column([login_card], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)))
 
-    # Start App smoothly
+    # App start hote hi directly Login Screen load hogi
     load_login()
 
-# --- THE MAGIC BYPASS ---
-# Yeh line Flet ko sirf Computer par hi force start karegi, Android app ko kill nahi hone degi.
-if __name__ == "__main__":
-    try:
-        ft.app(target=main)
-    except Exception:
-        pass
+# FINAL EXECUTION (Works perfectly on both PC and Android)
+ft.app(target=main)
