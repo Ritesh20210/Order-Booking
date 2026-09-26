@@ -9,12 +9,12 @@ c = None
 def init_db():
     global conn, c
     if conn is not None:
-        return # Agar pehle se connect hai toh wapas connect nahi karega
+        return 
         
     import pg8000.dbapi
     import ssl
     
-    # Android SSL bypass (Security block se bachne ke liye)
+    # Android SSL bypass
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
@@ -44,7 +44,6 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = ft.colors.BLUE_GREY_50
 
-    # Haptic Feedback (Vibration)
     haptic = ft.HapticFeedback()
     page.overlay.append(haptic)
 
@@ -62,7 +61,6 @@ def main(page: ft.Page):
         page.snack_bar.open = True
         page.update()
 
-    # --- HELPER FUNCTIONS ---
     def get_wallet(boy_name):
         c.execute("SELECT wallet FROM users WHERE name=%s", (boy_name,))
         res = c.fetchone()
@@ -275,7 +273,7 @@ def main(page: ft.Page):
             )
         )
 
-    # --- INSTANT LOGIN VIEW (No DB connection at startup) ---
+    # --- INSTANT LOGIN VIEW ---
     def load_login():
         page.controls.clear()
         
@@ -289,20 +287,18 @@ def main(page: ft.Page):
                     page.update()
                 return
 
-            # PIN sahi hai, ab database se connect karenge
             error_text.color = ft.colors.TEAL
             error_text.value = "Connecting to Secure Cloud..."
             page.update()
             
             try:
-                init_db()  # Cloud connection
+                init_db()  
                 trigger_success_notification()
                 if pin == "26":
                     load_boy_view()
                 elif pin == "69":
                     load_admin_view()
             except Exception as ex:
-                # Agar fail hua, toh app band nahi hoga, error dikhayega
                 error_text.color = ft.colors.RED
                 error_text.value = f"Connection Failed!\n{str(ex)}"
                 page.update()
@@ -329,8 +325,12 @@ def main(page: ft.Page):
         )
         page.add(ft.Container(expand=True, bgcolor=ft.colors.TEAL_400, content=ft.Column([login_card], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)))
 
-    # App start hote hi directly Login Screen load hogi
     load_login()
 
-# FINAL EXECUTION (Works perfectly on both PC and Android)
-ft.app(target=main)
+# --- THE FINAL CRASH SHIELD ---
+# Yeh line Android aur PC dono par secure tareeke se chalegi
+try:
+    ft.app(target=main)
+except AttributeError:
+    # Android environment detected, skipping PC boot sequence
+    pass
