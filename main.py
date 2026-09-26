@@ -46,7 +46,7 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = ft.Colors.BLUE_GREY_50
 
-    # --- VIBRATION (HAPTIC FEEDBACK ONLY - NO AUDIO) ---
+    # --- VIBRATION (HAPTIC FEEDBACK ONLY) ---
     haptic = ft.HapticFeedback()
     page.overlay.append(haptic)
 
@@ -369,11 +369,7 @@ def main(page: ft.Page):
         page.add(
             ft.Container(
                 expand=True,
-                gradient=ft.LinearGradient(
-                    begin=ft.alignment.top_center,
-                    end=ft.alignment.bottom_center,
-                    colors=[ft.Colors.TEAL_400, ft.Colors.BLUE_GREY_900]
-                ),
+                bgcolor=ft.Colors.TEAL_400,
                 content=ft.Column([login_card], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
             )
         )
