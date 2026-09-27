@@ -184,12 +184,19 @@ def main(page: ft.Page):
             )
         )
 
-    # --- ORDER BOY VIEW ---
+    # --- ORDER BOY VIEW (UPDATED WITH PAYMENT RECEIPT MODULE) ---
     def load_boy_view(boy_name="Ritesh (Boy)"):
         page.controls.clear()
         
         wallet = get_wallet(boy_name)
         pending = get_pending(boy_name)
+
+        def mark_status_boy(order_id, amount, b_name):
+            c.execute("UPDATE orders SET status='Received' WHERE id=%s", (order_id,))
+            c.execute("UPDATE users SET wallet = wallet + %s WHERE name=%s", (amount, b_name))
+            page.snack_bar = ft.SnackBar(ft.Text(f"Commission ₹{amount} Added to Wallet!"), bgcolor=ft.Colors.GREEN, open=True)
+            page.update()
+            load_boy_view(b_name)
 
         stats = ft.Row([
             ft.Container(content=ft.Column([ft.Text("Cleared Wallet"), ft.Text(f"₹{wallet}", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN)]), padding=10, bgcolor=ft.Colors.GREEN_50, border_radius=10, expand=True),
@@ -200,11 +207,22 @@ def main(page: ft.Page):
         c.execute("SELECT id, date, platform, qty, commission, status FROM orders WHERE boy_name=%s ORDER BY id DESC", (boy_name,))
         for row in c.fetchall():
             o_id, o_date, plat, q, com, stat = row
-            status_color = ft.Colors.ORANGE if stat == 'Pending' else (ft.Colors.GREEN if stat == 'Received' else ft.Colors.RED)
+            is_pending = stat == 'Pending'
+            status_color = ft.Colors.ORANGE if is_pending else (ft.Colors.GREEN if stat == 'Received' else ft.Colors.RED)
+            
+            action_ui = ft.Button(
+                "Receive Payment",
+                icon=ft.Icons.CHECK_CIRCLE,
+                bgcolor=ft.Colors.GREEN,
+                color=ft.Colors.WHITE,
+                on_click=lambda e, oid=o_id, amt=com, bn=boy_name: mark_status_boy(oid, amt, bn)
+            ) if is_pending else ft.Text(f"Status: {stat}", color=status_color, weight=ft.FontWeight.BOLD)
+
             orders_list.controls.append(
                 ft.Card(content=ft.Container(padding=10, content=ft.Column([
                     ft.Text(f"#{o_id} {plat} - {o_date}", weight=ft.FontWeight.BOLD),
-                    ft.Text(f"Qty: {q} | Commission: ₹{com} | Status: {stat}", color=status_color)
+                    ft.Text(f"Qty: {q} | Commission: ₹{com}"),
+                    action_ui
                 ])))
             )
 
@@ -248,4 +266,5 @@ def main(page: ft.Page):
 
     load_login()
 
-ft.run(main)
+if __name__ == "__main__":
+    ft.run(main)
