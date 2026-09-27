@@ -224,7 +224,7 @@ def main(page: ft.Page):
             pin = e.control.value
             if pin == "26":          
                 load_boy_view()
-            elif pin == "99":        
+            elif pin == "69":        
                 load_admin_view()
 
         pin_input = ft.TextField(
